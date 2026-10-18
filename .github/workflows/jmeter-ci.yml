@@ -58,10 +58,9 @@ jobs:
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
 
-          # Tách lấy tên file kịch bản (ví dụ: TS05_System_Stress.jmx)
-          $scenarioFile = Split-Path$scenario -Leaf
+          # Lấy tên file jmx bằng .NET Framework
+          $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Chạy container tại working dir: /workspace/scenarios để ăn khớp đường dẫn ../data
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
