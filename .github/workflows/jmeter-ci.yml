@@ -42,8 +42,16 @@ jobs:
       - name: Prepare Results Directory
         shell: powershell
         run: |
-          if (Test-Path -Path "./results") { 
-            Remove-Item -Recurse -Force "./results" 
+          # 1. Dọn dẹp nội dung cũ bên trong kết quả nếu có
+          if (Test-Path -Path "./results/html-report") { 
+            Remove-Item -Recurse -Force "./results/html-report" 
+          }
+          if (Test-Path -Path "./results/result.jtl") { 
+            Remove-Item -Force "./results/result.jtl" 
+          }
+          # 2. Tạo sẵn thư mục cha ./results (NHƯNG KHÔNG TẠO html-report để JMeter tự sinh)
+          if (-not (Test-Path -Path "./results")) {
+            New-Item -ItemType Directory -Force -Path "./results"
           }
 
       - name: Download Plugins
@@ -62,21 +70,22 @@ jobs:
           $baseUrl = "${{ github.event.inputs.base_url }}"
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
+          $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Chạy từ thư mục gốc /workspace để đường dẫn kết quả chuẩn xác tuyệt đối
+          # Khôi phục đúng môi trường chạy thành công của Run #16
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
             -v "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-casutg.jar" `
             -v "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-cmn.jar" `
-            -w /workspace `
+            -w /workspace/scenarios `
             justb4/jmeter:5.5 `
-            -n -t "$scenario" `
+            -n -t "$scenarioFile" `
             -JBASE_URL="$baseUrl" `
             -JPORT="$port" `
             -JPROTOCOL="$protocol" `
-            -l "results/result.jtl" `
-            -e -o "results/html-report"
+            -l "../results/result.jtl" `
+            -e -o "../results/html-report"
 
       - name: Upload HTML Test Report
         uses: actions/upload-artifact@v4
