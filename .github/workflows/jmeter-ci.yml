@@ -1,0 +1,73 @@
+name: JMeter Performance CI Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Chọn kịch bản test cần chạy'
+        required: true
+        default: 'scenarios/TS05_System_Stress.jmx'
+        type: choice
+        options:
+          - 'scenarios/TS01_Auth_Load.jmx'
+          - 'scenarios/TS02_Upload_File.jmx'
+          - 'scenarios/TS03_Search_Query_Load.jmx'
+          - 'scenarios/TS04_Collaboration_Flow.jmx'
+          - 'scenarios/TS05_System_Stress.jmx'
+      base_url:
+        description: 'Target Host (hoặc IP)'
+        required: true
+        default: 'host.docker.internal'
+      port:
+        description: 'Target Port'
+        required: true
+        default: '7157'
+      protocol:
+        description: 'Protocol (http / https)'
+        required: true
+        default: 'https'
+        type: choice
+        options:
+          - 'https'
+          - 'http'
+
+jobs:
+  run-jmeter-test:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Results Directory
+        shell: powershell
+        run: |
+          if (Test-Path -Path "./results/html-report") { 
+            Remove-Item -Recurse -Force "./results/html-report" 
+          }
+          if (Test-Path -Path "./results/result.jtl") { 
+            Remove-Item -Force "./results/result.jtl" 
+          }
+          New-Item -ItemType Directory -Force -Path "./results/html-report"
+
+      - name: Execute JMeter in Docker Container
+        shell: powershell
+        run: |
+          docker run --rm `
+            --add-host host.docker.internal:host-gateway `
+            -v "${{ github.workspace }}:/workspace" `
+            -w /workspace `
+            egaillardon/jmeter-plugins `
+            -n -t ${{ github.event.inputs.scenario }} `
+            -JBASE_URL=${{ github.event.inputs.base_url }} `
+            -JPORT=${{ github.event.inputs.port }} `
+            -JPROTOCOL=${{ github.event.inputs.protocol }} `
+            -l results/result.jtl `
+            -e -o results/html-report
+
+      - name: Upload HTML Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: JMeter-Report-${{ github.run_number }}
+          path: results/html-report/
