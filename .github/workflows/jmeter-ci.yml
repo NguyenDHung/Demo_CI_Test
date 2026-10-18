@@ -6,7 +6,7 @@ on:
       scenario:
         description: 'Chọn kịch bản test cần chạy'
         required: true
-        default: 'scenarios/TS05_System_Stress.jmx'
+        default: 'scenarios/TS01_Auth_Load.jmx'
         type: choice
         options:
           - 'scenarios/TS01_Auth_Load.jmx'
@@ -58,19 +58,23 @@ jobs:
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
 
+          # Tách lấy tên file kịch bản (ví dụ: TS05_System_Stress.jmx)
+          $scenarioFile = Split-Path$scenario -Leaf
+
+          # Chạy container tại working dir: /workspace/scenarios để ăn khớp đường dẫn ../data
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
-            -w /workspace `
+            -w /workspace/scenarios `
             egaillardon/jmeter-plugins `
             -n `
-            -t "$scenario" `
+            -t "$scenarioFile" `
             "-JBASE_URL=$baseUrl" `
             "-JPORT=$port" `
             "-JPROTOCOL=$protocol" `
-            -l "results/result.jtl" `
+            -l "../results/result.jtl" `
             -e `
-            -o "results/html-report"
+            -o "../results/html-report"
 
       - name: Upload HTML Test Report
         uses: actions/upload-artifact@v4
