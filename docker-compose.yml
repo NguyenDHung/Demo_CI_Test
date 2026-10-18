@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  jmeter-test:
+    image: justb4/jmeter:latest
+    container_name: jmeter_runner
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: >
+      -n -t scenarios/TS01_Auth_Load.jmx  -q config/env.properties  -JBASE_URL=host.docker.internal -f  -l results/test_result.jtl  -e -o results/html-report

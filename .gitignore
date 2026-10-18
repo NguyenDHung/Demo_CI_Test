@@ -1,0 +1,15 @@
+# JMeter log files
+jmeter.log
+bin/jmeter.log
+
+# JMeter test execution results & artifacts
+results/
+temp_run/
+*.jtl
+*.csv
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
