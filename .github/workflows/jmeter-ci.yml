@@ -53,25 +53,13 @@ jobs:
       - name: Pre-create Dynamic CSV Files
         shell: powershell
         run: |
-          # Bắt buộc tạo trước file để tránh lỗi FileNotFoundException ngầm của JMeter lúc khởi động kịch bản TS04 và TS05
+          # Bắt buộc tạo trước file CSV để tránh lỗi FileNotFoundException ngầm của JMeter lúc khởi động
           if (-not (Test-Path -Path "./data")) {
             New-Item -ItemType Directory -Force -Path "./data"
           }
           if (-not (Test-Path -Path "./data/collaboration_pairs.csv")) {
             New-Item -ItemType File -Force -Path "./data/collaboration_pairs.csv"
           }
-
-      - name: Download Plugins (Only for TS05)
-        if: github.event.inputs.scenario == 'scenarios/TS05_System_Stress.jmx'
-        shell: powershell
-        run: |
-          if (-not (Test-Path -Path "./plugins")) {
-            New-Item -ItemType Directory -Force -Path ./plugins
-          }
-          Write-Host "Downloading Ultimate Thread Group plugin for TS05..."
-          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" -OutFile "./plugins/jmeter-plugins-casutg-2.10.jar"
-          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter-0.7.jar" -OutFile "./plugins/jmeter-plugins-cmn-jmeter-0.7.jar"
-          Write-Host "Plugins downloaded successfully."
 
       - name: Execute JMeter in Docker Container
         shell: powershell
@@ -81,21 +69,29 @@ jobs:
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
 
-          # Đảm bảo mount volume không bị lỗi khi chạy các kịch bản khác (TS01-TS04) không tải plugin
-          if (-not (Test-Path -Path "./plugins")) {
-            New-Item -ItemType Directory -Force -Path ./plugins
-          }
-
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Sử dụng entrypoint /bin/sh để copy các plugin vào lõi JMeter y hệt như cách làm trên GitLab
+          # Sử dụng image justb4/jmeter:5.5 và PluginsManagerCMD.sh y hệt như GitLab CI cũ của bạn
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
             -w /workspace/scenarios `
             --entrypoint /bin/sh `
-            egaillardon/jmeter-plugins `
-            -c "cp /workspace/plugins/*.jar /opt/jmeter/lib/ext/ 2>/dev/null || true; jmeter -n -t $scenarioFile -JBASE_URL=$baseUrl -JPORT=$port -JPROTOCOL=$protocol -l ../results/result.jtl -e -o ../results/html-report"
+            justb4/jmeter:5.5 `
+            -c "
+              echo '=== TẢI VÀ CÀI ĐẶT JMETER PLUGINS MANAGER ==='
+              wget -q https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.10/jmeter-plugins-manager-1.10.jar -P /opt/jmeter/lib/ext/ || true
+              wget -q https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar -P /opt/jmeter/lib/ || true
+              java -cp /opt/jmeter/lib/ext/jmeter-plugins-manager-1.10.jar org.jmeterplugins.repository.PluginManagerCMDInstaller || true
+              
+              if [ '$scenarioFile' = 'TS05_System_Stress.jmx' ]; then
+                echo '=== CÀI ĐẶT GÓI ULTIMATE THREAD GROUP (jpgc-casutg) ==='
+                /opt/jmeter/bin/PluginsManagerCMD.sh install jpgc-casutg || true
+              fi
+              
+              echo '=== KHỞI CHẠY JMETER ==='
+              jmeter -n -t $scenarioFile -JBASE_URL=$baseUrl -JPORT=$port -JPROTOCOL=$protocol -l ../results/result.jtl -e -o ../results/html-report
+            "
 
       - name: Upload HTML Test Report
         uses: actions/upload-artifact@v4
