@@ -60,6 +60,34 @@ jobs:
             New-Item -ItemType File -Force -Path "./data/collaboration_pairs.csv"
           }
 
+      - name: Create JMeter Runner Script
+        shell: bash
+        run: |
+          # Sinh ra một file shell script để Docker tự chạy, tránh lỗi đường dẫn và lỗi của PowerShell
+          cat << 'EOF' > run-jmeter.sh
+          #!/bin/sh
+          set -e
+          
+          echo "=== TIM KIEM THU MUC JMETER ==="
+          JMETER_BIN=$(which jmeter)
+          JMETER_HOME=$(dirname $(dirname "$JMETER_BIN"))
+          echo "JMeter Home duoc tim thay tai: $JMETER_HOME"
+          
+          echo "=== TAI VA CAI DAT JMETER PLUGINS MANAGER ==="
+          wget -q https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.10/jmeter-plugins-manager-1.10.jar -P "$JMETER_HOME/lib/ext/" || true
+          wget -q https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar -P "$JMETER_HOME/lib/" || true
+          java -cp "$JMETER_HOME/lib/ext/jmeter-plugins-manager-1.10.jar" org.jmeterplugins.repository.PluginManagerCMDInstaller || true
+          
+          if [ "$SCENARIO_FILE" = "TS05_System_Stress.jmx" ]; then
+            echo "=== CAI DAT ULTIMATE THREAD GROUP ==="
+            "$JMETER_HOME/bin/PluginsManagerCMD.sh" install jpgc-casutg || true
+          fi
+          
+          echo "=== KHOI CHAY JMETER ==="
+          jmeter -n -t "scenarios/$SCENARIO_FILE" -JBASE_URL="$BASE_URL" -JPORT="$PORT" -JPROTOCOL="$PROTOCOL" -l results/result.jtl -e -o results/html-report
+          EOF
+          chmod +x run-jmeter.sh
+
       - name: Execute JMeter in Docker Container
         shell: powershell
         run: |
@@ -67,17 +95,20 @@ jobs:
           $baseUrl = "${{ github.event.inputs.base_url }}"
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
-
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Đưa toàn bộ script chạy bên trong container thành 1 dòng (inline) để tránh lỗi parse của PowerShell
+          # Khởi chạy Docker và đẩy các biến môi trường vào cho file script run-jmeter.sh xử lý
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
-            -w /workspace/scenarios `
+            -w /workspace `
+            -e SCENARIO_FILE="$scenarioFile" `
+            -e BASE_URL="$baseUrl" `
+            -e PORT="$port" `
+            -e PROTOCOL="$protocol" `
             --entrypoint /bin/sh `
             justb4/jmeter:5.5 `
-            -c "wget -q https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-manager/1.10/jmeter-plugins-manager-1.10.jar -P /opt/jmeter/lib/ext/ || true; wget -q https://repo1.maven.org/maven2/kg/apc/cmdrunner/2.3/cmdrunner-2.3.jar -P /opt/jmeter/lib/ || true; java -cp /opt/jmeter/lib/ext/jmeter-plugins-manager-1.10.jar org.jmeterplugins.repository.PluginManagerCMDInstaller || true; if [ '$scenarioFile' = 'TS05_System_Stress.jmx' ]; then /opt/jmeter/bin/PluginsManagerCMD.sh install jpgc-casutg || true; fi; jmeter -n -t $scenarioFile -JBASE_URL=$baseUrl -JPORT=$port -JPROTOCOL=$protocol -l ../results/result.jtl -e -o ../results/html-report"
+            /workspace/run-jmeter.sh
 
       - name: Upload HTML Test Report
         uses: actions/upload-artifact@v4
