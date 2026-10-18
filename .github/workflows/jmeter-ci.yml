@@ -50,6 +50,16 @@ jobs:
           }
           New-Item -ItemType Directory -Force -Path "./results/html-report"
 
+      - name: Download Plugins (Only for TS05)
+        if: github.event.inputs.scenario == 'scenarios/TS05_System_Stress.jmx'
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path ./plugins
+          Write-Host "Downloading Ultimate Thread Group plugin for TS05..."
+          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" -OutFile "./plugins/jmeter-plugins-casutg-2.10.jar"
+          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter-0.7.jar" -OutFile "./plugins/jmeter-plugins-cmn-jmeter-0.7.jar"
+          Write-Host "Plugins downloaded successfully."
+
       - name: Execute JMeter in Docker Container
         shell: powershell
         run: |
@@ -57,6 +67,11 @@ jobs:
           $baseUrl = "${{ github.event.inputs.base_url }}"
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
+
+          # Tạo thư mục plugins trống (nếu chưa có) để JMeter không báo lỗi path khi chạy các kịch bản TS01-TS04
+          if (-not (Test-Path -Path "./plugins")) {
+            New-Item -ItemType Directory -Force -Path ./plugins
+          }
 
           # Lấy tên file jmx bằng .NET Framework
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
@@ -68,6 +83,7 @@ jobs:
             egaillardon/jmeter-plugins `
             -n `
             -t "$scenarioFile" `
+            "-Jsearch_paths=/workspace/plugins" `
             "-JBASE_URL=$baseUrl" `
             "-JPORT=$port" `
             "-JPROTOCOL=$protocol" `
