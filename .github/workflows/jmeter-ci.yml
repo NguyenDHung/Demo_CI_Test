@@ -42,11 +42,9 @@ jobs:
       - name: Prepare Results Directory
         shell: powershell
         run: |
-          # Chỉ xóa sạch thư mục results cũ nếu có để tránh xung đột
           if (Test-Path -Path "./results") { 
             Remove-Item -Recurse -Force "./results" 
           }
-          # QUAN TRỌNG: Không tạo trước thư mục html-report để JMeter tự tạo mới hoàn toàn
 
       - name: Download Plugins
         shell: powershell
@@ -64,21 +62,21 @@ jobs:
           $baseUrl = "${{ github.event.inputs.base_url }}"
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
-          $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
+          # Chạy từ thư mục gốc /workspace để đường dẫn kết quả chuẩn xác tuyệt đối
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
             -v "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-casutg.jar" `
             -v "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-cmn.jar" `
-            -w /workspace/scenarios `
+            -w /workspace `
             justb4/jmeter:5.5 `
-            -n -t "$scenarioFile" `
+            -n -t "$scenario" `
             -JBASE_URL="$baseUrl" `
             -JPORT="$port" `
             -JPROTOCOL="$protocol" `
-            -l "../results/result.jtl" `
-            -e -o "../results/html-report"
+            -l "results/result.jtl" `
+            -e -o "results/html-report"
 
       - name: Upload HTML Test Report
         uses: actions/upload-artifact@v4
