@@ -42,35 +42,37 @@ jobs:
       - name: Prepare Results Directory
         shell: powershell
         run: |
-          if (Test-Path -Path "./results/html-report") { 
-            Remove-Item -Recurse -Force "./results/html-report" 
-          }
-          if (Test-Path -Path "./results/result.jtl") { 
-            Remove-Item -Force "./results/result.jtl" 
+          if (Test-Path -Path "./results") { 
+            Remove-Item -Recurse -Force "./results" 
           }
           New-Item -ItemType Directory -Force -Path "./results/html-report"
 
-      - name: Pre-create Dynamic CSV Files
+      - name: Pre-create Missing CSV Files (Failsafe)
         shell: powershell
         run: |
-          # Bắt buộc tạo trước file để tránh lỗi FileNotFoundException ngầm của JMeter
+          # Nếu thiếu file CSV, JMeter sẽ lỗi ngầm và không chạy. 
+          # Bước này tạo các file CSV có sẵn 1 dòng header giả để JMeter khởi tạo thành công.
           if (-not (Test-Path -Path "./data")) {
             New-Item -ItemType Directory -Force -Path "./data"
           }
-          if (-not (Test-Path -Path "./data/collaboration_pairs.csv")) {
-            New-Item -ItemType File -Force -Path "./data/collaboration_pairs.csv"
+          $csvFiles = @("users.csv", "upload_files.csv", "keywords.csv", "collaboration_pairs.csv")
+          foreach ($file in $csvFiles) {
+            if (-not (Test-Path -Path "./data/$file")) {
+              Set-Content -Path "./data/$file" -Value "dummy_header1,dummy_header2`ndummy_val1,dummy_val2"
+              Write-Host "Created dummy file: ./data/$file"
+            }
           }
 
-      - name: Download Plugins (Only for TS05)
-        if: github.event.inputs.scenario == 'scenarios/TS05_System_Stress.jmx'
+      - name: Download Plugins
         shell: powershell
         run: |
+          # Tải plugin sẵn ở máy Windows
           if (-not (Test-Path -Path "./plugins")) {
-            New-Item -ItemType Directory -Force -Path ./plugins
+            New-Item -ItemType Directory -Force -Path "./plugins"
           }
           Write-Host "Downloading Ultimate Thread Group plugins..."
-          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" -OutFile "./plugins/jmeter-plugins-casutg-2.10.jar"
-          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter-0.7.jar" -OutFile "./plugins/jmeter-plugins-cmn-jmeter-0.7.jar"
+          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" -OutFile "./plugins/jmeter-plugins-casutg.jar"
+          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter.jar" -OutFile "./plugins/jmeter-plugins-cmn.jar"
 
       - name: Execute JMeter in Docker Container
         shell: powershell
@@ -81,20 +83,21 @@ jobs:
           $protocol = "${{ github.event.inputs.protocol }}"
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          if (-not (Test-Path -Path "./plugins")) {
-            New-Item -ItemType Directory -Force -Path ./plugins
-          }
-
-          # Chuỗi lệnh chạy nội bộ trong Container: Tự động tìm thư mục JMeter và copy Plugin vào
-          $cmd = "JMETER_BIN=`$(which jmeter); JMETER_HOME=`$(dirname `$(dirname `$JMETER_BIN)); cp /workspace/plugins/*.jar `$JMETER_HOME/lib/ext/ 2>/dev/null || true; jmeter -n -t scenarios/$scenarioFile -JBASE_URL=$baseUrl -JPORT=$port -JPROTOCOL=$protocol -l results/result.jtl -e -o results/html-report"
-
+          # Trả lại lệnh chạy cơ bản nhất, KHÔNG DÙNG ENTRYPOINT hay SHELL SCRIPT.
+          # Dùng -v để map trực tiếp từng file .jar vào đúng thư mục /opt/jmeter/lib/ext/ của image justb4/jmeter:5.5
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
-            -w /workspace `
-            --entrypoint /bin/sh `
+            -v "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar:/opt/jmeter/lib/ext/jmeter-plugins-casutg.jar" `
+            -v "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar:/opt/jmeter/lib/ext/jmeter-plugins-cmn.jar" `
+            -w /workspace/scenarios `
             justb4/jmeter:5.5 `
-            -c $cmd
+            -n -t "$scenarioFile" `
+            -JBASE_URL="$baseUrl" `
+            -JPORT="$port" `
+            -JPROTOCOL="$protocol" `
+            -l "../results/result.jtl" `
+            -e -o "../results/html-report"
 
       - name: Upload HTML Test Report
         uses: actions/upload-artifact@v4
