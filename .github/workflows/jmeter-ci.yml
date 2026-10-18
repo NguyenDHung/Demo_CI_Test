@@ -47,19 +47,6 @@ jobs:
           }
           New-Item -ItemType Directory -Force -Path "./results/html-report"
 
-      - name: Pre-create Missing CSV Files (Failsafe)
-        shell: powershell
-        run: |
-          if (-not (Test-Path -Path "./data")) {
-            New-Item -ItemType Directory -Force -Path "./data"
-          }
-          $csvFiles = @("users.csv", "upload_files.csv", "keywords.csv", "collaboration_pairs.csv")
-          foreach ($file in $csvFiles) {
-            if (-not (Test-Path -Path "./data/$file")) {
-              Set-Content -Path "./data/$file" -Value "dummy_header1,dummy_header2`ndummy_val1,dummy_val2"
-            }
-          }
-
       - name: Download Plugins
         shell: powershell
         run: |
@@ -79,7 +66,7 @@ jobs:
           $protocol = "${{ github.event.inputs.protocol }}"
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Mount trực tiếp vào thư mục cài đặt gốc /opt/apache-jmeter-5.5/
+          # Mount trực tiếp vào thư mục cài đặt gốc /opt/apache-jmeter-5.5/ kèm theo plugin
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
