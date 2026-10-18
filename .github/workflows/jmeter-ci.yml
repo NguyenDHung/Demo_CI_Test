@@ -53,7 +53,7 @@ jobs:
       - name: Pre-create Dynamic CSV Files
         shell: powershell
         run: |
-          # Tạo sẵn file rỗng để vượt qua bước xác thực CSV Data Set Config của JMeter lúc khởi tạo
+          # Bắt buộc tạo trước file để tránh lỗi FileNotFoundException ngầm của JMeter lúc khởi động kịch bản TS04 và TS05
           if (-not (Test-Path -Path "./data")) {
             New-Item -ItemType Directory -Force -Path "./data"
           }
@@ -81,13 +81,14 @@ jobs:
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
 
+          # Đảm bảo mount volume không bị lỗi khi chạy các kịch bản khác (TS01-TS04) không tải plugin
           if (-not (Test-Path -Path "./plugins")) {
             New-Item -ItemType Directory -Force -Path ./plugins
           }
 
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Sử dụng entrypoint /bin/sh để copy vật lý các file .jar vào lõi của JMeter trước khi khởi chạy lệnh test
+          # Sử dụng entrypoint /bin/sh để copy các plugin vào lõi JMeter y hệt như cách làm trên GitLab
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
