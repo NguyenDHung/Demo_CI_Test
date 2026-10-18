@@ -50,8 +50,6 @@ jobs:
       - name: Pre-create Missing CSV Files (Failsafe)
         shell: powershell
         run: |
-          # Nếu thiếu file CSV, JMeter sẽ lỗi ngầm và không chạy. 
-          # Bước này tạo các file CSV có sẵn 1 dòng header giả để JMeter khởi tạo thành công.
           if (-not (Test-Path -Path "./data")) {
             New-Item -ItemType Directory -Force -Path "./data"
           }
@@ -59,20 +57,18 @@ jobs:
           foreach ($file in $csvFiles) {
             if (-not (Test-Path -Path "./data/$file")) {
               Set-Content -Path "./data/$file" -Value "dummy_header1,dummy_header2`ndummy_val1,dummy_val2"
-              Write-Host "Created dummy file: ./data/$file"
             }
           }
 
       - name: Download Plugins
         shell: powershell
         run: |
-          # Tải plugin sẵn ở máy Windows
           if (-not (Test-Path -Path "./plugins")) {
             New-Item -ItemType Directory -Force -Path "./plugins"
           }
           Write-Host "Downloading Ultimate Thread Group plugins..."
           Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" -OutFile "./plugins/jmeter-plugins-casutg.jar"
-          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter.jar" -OutFile "./plugins/jmeter-plugins-cmn.jar"
+          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter-0.7.jar" -OutFile "./plugins/jmeter-plugins-cmn.jar"
 
       - name: Execute JMeter in Docker Container
         shell: powershell
@@ -83,13 +79,12 @@ jobs:
           $protocol = "${{ github.event.inputs.protocol }}"
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Trả lại lệnh chạy cơ bản nhất, KHÔNG DÙNG ENTRYPOINT hay SHELL SCRIPT.
-          # Dùng -v để map trực tiếp từng file .jar vào đúng thư mục /opt/jmeter/lib/ext/ của image justb4/jmeter:5.5
+          # Mount trực tiếp vào thư mục cài đặt gốc /opt/apache-jmeter-5.5/
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
-            -v "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar:/opt/jmeter/lib/ext/jmeter-plugins-casutg.jar" `
-            -v "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar:/opt/jmeter/lib/ext/jmeter-plugins-cmn.jar" `
+            -v "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-casutg.jar" `
+            -v "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-cmn.jar" `
             -w /workspace/scenarios `
             justb4/jmeter:5.5 `
             -n -t "$scenarioFile" `
