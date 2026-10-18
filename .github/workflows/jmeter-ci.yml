@@ -42,10 +42,11 @@ jobs:
       - name: Prepare Results Directory
         shell: powershell
         run: |
+          # Chỉ xóa sạch thư mục results cũ nếu có để tránh xung đột
           if (Test-Path -Path "./results") { 
             Remove-Item -Recurse -Force "./results" 
           }
-          New-Item -ItemType Directory -Force -Path "./results/html-report"
+          # QUAN TRỌNG: Không tạo trước thư mục html-report để JMeter tự tạo mới hoàn toàn
 
       - name: Download Plugins
         shell: powershell
@@ -53,7 +54,6 @@ jobs:
           if (-not (Test-Path -Path "./plugins")) {
             New-Item -ItemType Directory -Force -Path "./plugins"
           }
-          Write-Host "Downloading Ultimate Thread Group plugins..."
           Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" -OutFile "./plugins/jmeter-plugins-casutg.jar"
           Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter-0.7.jar" -OutFile "./plugins/jmeter-plugins-cmn.jar"
 
@@ -66,7 +66,6 @@ jobs:
           $protocol = "${{ github.event.inputs.protocol }}"
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Mount trực tiếp vào thư mục cài đặt gốc /opt/apache-jmeter-5.5/ kèm theo plugin
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
