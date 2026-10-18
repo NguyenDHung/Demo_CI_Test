@@ -50,6 +50,17 @@ jobs:
           }
           New-Item -ItemType Directory -Force -Path "./results/html-report"
 
+      - name: Pre-create Dynamic CSV Files
+        shell: powershell
+        run: |
+          # Tạo sẵn file rỗng để vượt qua bước xác thực CSV Data Set Config của JMeter lúc khởi tạo
+          if (-not (Test-Path -Path "./data")) {
+            New-Item -ItemType Directory -Force -Path "./data"
+          }
+          if (-not (Test-Path -Path "./data/collaboration_pairs.csv")) {
+            New-Item -ItemType File -Force -Path "./data/collaboration_pairs.csv"
+          }
+
       - name: Download Plugins (Only for TS05)
         if: github.event.inputs.scenario == 'scenarios/TS05_System_Stress.jmx'
         shell: powershell
@@ -70,27 +81,20 @@ jobs:
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
 
-          # Đảm bảo thư mục plugins luôn tồn tại để Docker không báo lỗi khi mount (với các kịch bản TS01-TS04)
           if (-not (Test-Path -Path "./plugins")) {
             New-Item -ItemType Directory -Force -Path ./plugins
           }
 
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
+          # Sử dụng entrypoint /bin/sh để copy vật lý các file .jar vào lõi của JMeter trước khi khởi chạy lệnh test
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
             -w /workspace/scenarios `
+            --entrypoint /bin/sh `
             egaillardon/jmeter-plugins `
-            -n `
-            -t "$scenarioFile" `
-            "-Juser.classpath=/workspace/plugins/jmeter-plugins-casutg-2.10.jar:/workspace/plugins/jmeter-plugins-cmn-jmeter-0.7.jar" `
-            "-JBASE_URL=$baseUrl" `
-            "-JPORT=$port" `
-            "-JPROTOCOL=$protocol" `
-            -l "../results/result.jtl" `
-            -e `
-            -o "../results/html-report"
+            -c "cp /workspace/plugins/*.jar /opt/jmeter/lib/ext/ 2>/dev/null || true; jmeter -n -t $scenarioFile -JBASE_URL=$baseUrl -JPORT=$port -JPROTOCOL=$protocol -l ../results/result.jtl -e -o ../results/html-report"
 
       - name: Upload HTML Test Report
         uses: actions/upload-artifact@v4
