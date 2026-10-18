@@ -53,17 +53,24 @@ jobs:
       - name: Execute JMeter in Docker Container
         shell: powershell
         run: |
+          $scenario = "${{ github.event.inputs.scenario }}"
+          $baseUrl = "${{ github.event.inputs.base_url }}"
+          $port = "${{ github.event.inputs.port }}"
+          $protocol = "${{ github.event.inputs.protocol }}"
+
           docker run --rm `
-            --add-host host.docker.internal:host-gateway `
+            --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
             -w /workspace `
             egaillardon/jmeter-plugins `
-            -n -t ${{ github.event.inputs.scenario }} `
-            -JBASE_URL=${{ github.event.inputs.base_url }} `
-            -JPORT=${{ github.event.inputs.port }} `
-            -JPROTOCOL=${{ github.event.inputs.protocol }} `
-            -l results/result.jtl `
-            -e -o results/html-report
+            -n `
+            -t "$scenario" `
+            "-JBASE_URL=$baseUrl" `
+            "-JPORT=$port" `
+            "-JPROTOCOL=$protocol" `
+            -l "results/result.jtl" `
+            -e `
+            -o "results/html-report"
 
       - name: Upload HTML Test Report
         uses: actions/upload-artifact@v4
