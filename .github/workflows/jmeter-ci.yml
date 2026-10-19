@@ -83,6 +83,9 @@ jobs:
           $baseUrl = "${{ github.event.inputs.base_url }}"
           $port = "${{ github.event.inputs.port }}"
           $protocol = "${{ github.event.inputs.protocol }}"
+          $loginUser = "${{ github.event.inputs.login_user }}"
+          $loginRampUp = "${{ github.event.inputs.login_ramp_up }}"
+          $loginDuration = "${{ github.event.inputs.login_duration }}"
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
           # Khôi phục đúng môi trường chạy thành công của Run #16
