@@ -14,6 +14,19 @@ on:
           - 'scenarios/TS03_Search_Query_Load.jmx'
           - 'scenarios/TS04_Collaboration_Flow.jmx'
           - 'scenarios/TS05_System_Stress.jmx'
+          - 'scenarios/TS06_Upload_File_Stress.jmx'
+      login_user:
+        description: 'Số lượng Virtual Users (LOGIN_USER)'
+        required: true
+        default: '50'
+      login_ramp_up:
+        description: 'Thời gian Ramp-up tính theo giây (LOGIN_RAMP_UP)'
+        required: true
+        default: '30'
+      login_duration:
+        description: 'Thời gian chạy test tính theo giây (LOGIN_DURATION)'
+        required: true
+        default: '180'
       base_url:
         description: 'Target Host (hoặc IP)'
         required: true
@@ -84,6 +97,9 @@ jobs:
             -JBASE_URL="$baseUrl" `
             -JPORT="$port" `
             -JPROTOCOL="$protocol" `
+            -JLOGIN_USER="$loginUser" `
+            -JLOGIN_RAMP_UP="$loginRampUp" `
+            -JLOGIN_DURATION="$loginDuration" `
             -l "../results/result.jtl" `
             -e -o "../results/html-report"
 

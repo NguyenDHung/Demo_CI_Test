@@ -6,7 +6,6 @@ bin/jmeter.log
 results/
 temp_run/
 *.jtl
-*.csv
 
 # OS and Editor files
 .DS_Store
