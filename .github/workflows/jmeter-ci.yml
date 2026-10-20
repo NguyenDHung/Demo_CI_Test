@@ -67,6 +67,7 @@ jobs:
           if (-not (Test-Path -Path "./results")) {
             New-Item -ItemType Directory -Force -Path "./results"
           }
+          Set-Content -Path "./user.properties" -Value "jmeter.reportgenerator.exporter.html.series_filter=^TX_.*$"
 
       - name: Download Plugins (TS05 & TS06 only)
         if: contains(github.event.inputs.scenario, 'TS05') || contains(github.event.inputs.scenario, 'TS06')
@@ -113,13 +114,13 @@ jobs:
             -w /workspace/scenarios `
             justb4/jmeter:5.5 `
             -n -t "$scenarioFile" `
+            -q "/workspace/user.properties" `
             -JBASE_URL="$baseUrl" `
             -JPORT="$port" `
             -JPROTOCOL="$protocol" `
             -JLOGIN_USER="$loginUser" `
             -JLOGIN_RAMP_UP="$loginRampUp" `
             -JLOGIN_DURATION="$loginDuration" `
-            -Jjmeter.reportgenerator.exporter.html.series_filter="^TX_.*$" `
             -l "../results/result.jtl" `
             -e -o "../results/html-report"
 
