@@ -68,14 +68,19 @@ jobs:
             New-Item -ItemType Directory -Force -Path "./results"
           }
 
-      - name: Download Plugins
+      - name: Download Plugins (TS05 & TS06 only)
+        if: contains(github.event.inputs.scenario, 'TS05') || contains(github.event.inputs.scenario, 'TS06')
         shell: powershell
         run: |
           if (-not (Test-Path -Path "./plugins")) {
             New-Item -ItemType Directory -Force -Path "./plugins"
           }
-          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" -OutFile "./plugins/jmeter-plugins-casutg.jar"
-          Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter-0.7.jar" -OutFile "./plugins/jmeter-plugins-cmn.jar"
+          if (-not (Test-Path -Path "./plugins/jmeter-plugins-casutg.jar")) {
+            Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-casutg/2.10/jmeter-plugins-casutg-2.10.jar" -OutFile "./plugins/jmeter-plugins-casutg.jar"
+          }
+          if (-not (Test-Path -Path "./plugins/jmeter-plugins-cmn.jar")) {
+            Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/kg/apc/jmeter-plugins-cmn-jmeter/0.7/jmeter-plugins-cmn-jmeter-0.7.jar" -OutFile "./plugins/jmeter-plugins-cmn.jar"
+          }
 
       - name: Execute JMeter in Docker Container
         shell: powershell
@@ -87,13 +92,24 @@ jobs:
           $loginUser = "${{ github.event.inputs.login_user }}"
           $loginRampUp = "${{ github.event.inputs.login_ramp_up }}"
           $loginDuration = "${{ github.event.inputs.login_duration }}"
+          
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
+          $scenarioName = [System.IO.Path]::GetFileNameWithoutExtension($scenario)
+          echo "SCENARIO_NAME=$scenarioName" >> $env:GITHUB_ENV
+
+          # Kiểm tra nếu có plugin thì mới mount vào container
+          $pluginMounts = @()
+          if (Test-Path -Path "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar") {
+            $pluginMounts += "-v", "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-casutg.jar"
+          }
+          if (Test-Path -Path "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar") {
+            $pluginMounts += "-v", "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-cmn.jar"
+          }
 
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
-            -v "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-casutg.jar" `
-            -v "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-cmn.jar" `
+            $pluginMounts `
             -w /workspace/scenarios `
             justb4/jmeter:5.5 `
             -n -t "$scenarioFile" `
