@@ -1,4 +1,5 @@
 name: JMeter Performance CI Pipeline
+run-name: "[${{ github.event.inputs.scenario }}] -${{ github.event.inputs.login_user }} VUs by @${{ github.actor }}"
 
 on:
   workflow_dispatch:
@@ -88,7 +89,6 @@ jobs:
           $loginDuration = "${{ github.event.inputs.login_duration }}"
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
 
-          # Khôi phục đúng môi trường chạy thành công của Run #16
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
@@ -103,6 +103,7 @@ jobs:
             -JLOGIN_USER="$loginUser" `
             -JLOGIN_RAMP_UP="$loginRampUp" `
             -JLOGIN_DURATION="$loginDuration" `
+            -Jjmeter.reportgenerator.exporter.html.series_filter="^TX_.*$" `
             -l "../results/result.jtl" `
             -e -o "../results/html-report"
 

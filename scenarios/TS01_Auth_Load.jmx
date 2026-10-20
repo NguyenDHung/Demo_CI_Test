@@ -53,10 +53,16 @@
           <stringProp name="variableNames">email,password</stringProp>
         </CSVDataSet>
         <hashTree/>
-        <IncludeController guiclass="IncludeControllerGui" testclass="IncludeController" testname="Include_Login" enabled="true">
-          <stringProp name="IncludeController.includepath">../fragments/tf_login.jmx</stringProp>
-        </IncludeController>
-        <hashTree/>
+        <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="TX_Login" enabled="true">
+          <boolProp name="TransactionController.parent">true</boolProp>
+          <boolProp name="TransactionController.includeTimers">false</boolProp>
+        </TransactionController>
+        <hashTree>
+          <IncludeController guiclass="IncludeControllerGui" testclass="IncludeController" testname="Include_Login" enabled="true">
+            <stringProp name="IncludeController.includepath">../fragments/tf_login.jmx</stringProp>
+          </IncludeController>
+          <hashTree/>
+        </hashTree>
         <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Uniform Random Timer" enabled="true">
           <stringProp name="ConstantTimer.delay">100</stringProp>
           <stringProp name="RandomTimer.range">1000</stringProp>
