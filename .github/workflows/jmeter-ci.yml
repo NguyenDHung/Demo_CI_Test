@@ -83,29 +83,21 @@ jobs:
             New-Item -ItemType Directory -Force -Path "./results"
           }
 
-          $configParams = [ordered]@{
-            "jmeter.reportgenerator.exporter.html.series_filter" = "^TX_.*$"
-            "BASE_URL"        = "${{ github.event.inputs.base_url }}"
-            "PORT"            = "${{ github.event.inputs.port }}"
-            "PROTOCOL"        = "${{ github.event.inputs.protocol }}"
-            
-            # Tham số TS01
-            "LOGIN_USER"      = "${{ github.event.inputs.login_user }}"
-            "LOGIN_RAMP_UP"   = "${{ github.event.inputs.login_ramp_up }}"
-            "LOGIN_DURATION"  = "${{ github.event.inputs.login_duration }}"
-            
-            # Tham số TS02
-            "UPLOAD_USER"     = "${{ github.event.inputs.upload_user }}"
-            "UPLOAD_RAMP_UP"  = "${{ github.event.inputs.upload_ramp_up }}"
-            "UPLOAD_DURATION" = "${{ github.event.inputs.upload_duration }}"
-          }
+          # 3. Ghi trực tiếp các biến cấu hình vào run.properties bằng Here-String (không dùng foreach)
+          $content = @"
+          jmeter.reportgenerator.exporter.html.series_filter=^TX_.*$
+          BASE_URL=${{ github.event.inputs.base_url }}
+          PORT=${{ github.event.inputs.port }}
+          PROTOCOL=${{ github.event.inputs.protocol }}
+          LOGIN_USER=${{ github.event.inputs.login_user }}
+          LOGIN_RAMP_UP=${{ github.event.inputs.login_ramp_up }}
+          LOGIN_DURATION=${{ github.event.inputs.login_duration }}
+          UPLOAD_USER=${{ github.event.inputs.upload_user }}
+          UPLOAD_RAMP_UP=${{ github.event.inputs.upload_ramp_up }}
+          UPLOAD_DURATION=${{ github.event.inputs.upload_duration }}
+          "@
 
-          # 3. Ghi ra file run.properties
-          $lines = @()
-          foreach ($key in$configParams.Keys) {
-            $val =$configParams[$key]$lines += "$key=$val"
-          }
-          Set-Content -Path "./run.properties" -Value ($lines -join "`n")
+          Set-Content -Path "./run.properties" -Value $content
 
       - name: Download Plugins (TS05 & TS06 only)
         if: contains(github.event.inputs.scenario, 'TS05') || contains(github.event.inputs.scenario, 'TS06')
