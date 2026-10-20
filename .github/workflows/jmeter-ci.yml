@@ -17,17 +17,32 @@ on:
           - 'scenarios/TS05_System_Stress.jmx'
           - 'scenarios/TS06_Upload_File_Stress.jmx'
       login_user:
-        description: 'Số lượng Virtual Users (LOGIN_USER)'
+        description: '[TS01] Số lượng Virtual Users (LOGIN_USER)'
         required: true
         default: '50'
       login_ramp_up:
-        description: 'Thời gian Ramp-up tính theo giây (LOGIN_RAMP_UP)'
+        description: '[TS01] Thời gian Ramp-up tính theo giây (LOGIN_RAMP_UP)'
         required: true
         default: '30'
       login_duration:
-        description: 'Thời gian chạy test tính theo giây (LOGIN_DURATION)'
+        description: '[TS01] Thời gian chạy test tính theo giây (LOGIN_DURATION)'
         required: true
         default: '180'
+
+      # --- Cấu hình cho TS02 (Upload File) ---
+      upload_user:
+        description: '[TS02] Số lượng Virtual Users (UPLOAD_USER)'
+        required: false
+        default: '20'
+      upload_ramp_up:
+        description: '[TS02] Thời gian Ramp-up giây (UPLOAD_RAMP_UP)'
+        required: false
+        default: '20'
+      upload_duration:
+        description: '[TS02] Thời gian chạy giây (UPLOAD_DURATION)'
+        required: false
+        default: '180'
+
       base_url:
         description: 'Target Host (hoặc IP)'
         required: true
@@ -67,7 +82,30 @@ jobs:
           if (-not (Test-Path -Path "./results")) {
             New-Item -ItemType Directory -Force -Path "./results"
           }
-          Set-Content -Path "./user.properties" -Value "jmeter.reportgenerator.exporter.html.series_filter=^TX_.*$"
+
+          $configParams = [ordered]@{
+            "jmeter.reportgenerator.exporter.html.series_filter" = "^TX_.*$"
+            "BASE_URL"        = "${{ github.event.inputs.base_url }}"
+            "PORT"            = "${{ github.event.inputs.port }}"
+            "PROTOCOL"        = "${{ github.event.inputs.protocol }}"
+            
+            # Tham số TS01
+            "LOGIN_USER"      = "${{ github.event.inputs.login_user }}"
+            "LOGIN_RAMP_UP"   = "${{ github.event.inputs.login_ramp_up }}"
+            "LOGIN_DURATION"  = "${{ github.event.inputs.login_duration }}"
+            
+            # Tham số TS02
+            "UPLOAD_USER"     = "${{ github.event.inputs.upload_user }}"
+            "UPLOAD_RAMP_UP"  = "${{ github.event.inputs.upload_ramp_up }}"
+            "UPLOAD_DURATION" = "${{ github.event.inputs.upload_duration }}"
+          }
+
+          # 3. Ghi ra file run.properties
+          $lines = @()
+          foreach ($key in$configParams.Keys) {
+            $val =$configParams[$key]$lines += "$key=$val"
+          }
+          Set-Content -Path "./run.properties" -Value ($lines -join "`n")
 
       - name: Download Plugins (TS05 & TS06 only)
         if: contains(github.event.inputs.scenario, 'TS05') || contains(github.event.inputs.scenario, 'TS06')
@@ -87,18 +125,11 @@ jobs:
         shell: powershell
         run: |
           $scenario = "${{ github.event.inputs.scenario }}"
-          $baseUrl = "${{ github.event.inputs.base_url }}"
-          $port = "${{ github.event.inputs.port }}"
-          $protocol = "${{ github.event.inputs.protocol }}"
-          $loginUser = "${{ github.event.inputs.login_user }}"
-          $loginRampUp = "${{ github.event.inputs.login_ramp_up }}"
-          $loginDuration = "${{ github.event.inputs.login_duration }}"
-          
           $scenarioFile = [System.IO.Path]::GetFileName($scenario)
           $scenarioName = [System.IO.Path]::GetFileNameWithoutExtension($scenario)
           echo "SCENARIO_NAME=$scenarioName" >> $env:GITHUB_ENV
 
-          # Kiểm tra nếu có plugin thì mới mount vào container
+          # Mount plugin nếu có
           $pluginMounts = @()
           if (Test-Path -Path "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar") {
             $pluginMounts += "-v", "${{ github.workspace }}/plugins/jmeter-plugins-casutg.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-casutg.jar"
@@ -107,6 +138,7 @@ jobs:
             $pluginMounts += "-v", "${{ github.workspace }}/plugins/jmeter-plugins-cmn.jar:/opt/apache-jmeter-5.5/lib/ext/jmeter-plugins-cmn.jar"
           }
 
+          # Gọi Docker ngắn gọn với cờ -q
           docker run --rm `
             --add-host=host.docker.internal:host-gateway `
             -v "${{ github.workspace }}:/workspace" `
@@ -114,13 +146,7 @@ jobs:
             -w /workspace/scenarios `
             justb4/jmeter:5.5 `
             -n -t "$scenarioFile" `
-            -q "/workspace/user.properties" `
-            -JBASE_URL="$baseUrl" `
-            -JPORT="$port" `
-            -JPROTOCOL="$protocol" `
-            -JLOGIN_USER="$loginUser" `
-            -JLOGIN_RAMP_UP="$loginRampUp" `
-            -JLOGIN_DURATION="$loginDuration" `
+            -q "/workspace/run.properties" `
             -l "../results/result.jtl" `
             -e -o "../results/html-report"
 
