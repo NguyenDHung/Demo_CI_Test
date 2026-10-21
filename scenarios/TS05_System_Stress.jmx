@@ -57,7 +57,7 @@ pairsFile.text = pairs.join(&quot;\n&quot;)</stringProp>
         </JSR223Sampler>
         <hashTree/>
       </hashTree>
-      <kg.apc.jmeter.threads.UltimateThreadGroup guiclass="kg.apc.jmeter.threads.UltimateThreadGroupGui" testclass="kg.apc.jmeter.threads.UltimateThreadGroup" testname="Ultimate Thread Group - Single User Flows" enabled="true">
+      <kg.apc.jmeter.threads.UltimateThreadGroup guiclass="kg.apc.jmeter.threads.UltimateThreadGroupGui" testclass="kg.apc.jmeter.threads.UltimateThreadGroup" testname="Ultimate Thread Group - Single User Flows">
         <collectionProp name="ultimatethreadgroupdata">
           <collectionProp name="1777563916">
             <stringProp name="1575">18</stringProp>
@@ -327,7 +327,7 @@ pairsFile.text = pairs.join(&quot;\n&quot;)</stringProp>
         </ResultCollector>
         <hashTree/>
       </hashTree>
-      <kg.apc.jmeter.threads.UltimateThreadGroup guiclass="kg.apc.jmeter.threads.UltimateThreadGroupGui" testclass="kg.apc.jmeter.threads.UltimateThreadGroup" testname="Ultimate Thread Group - Collab &amp; Download" enabled="true">
+      <kg.apc.jmeter.threads.UltimateThreadGroup guiclass="kg.apc.jmeter.threads.UltimateThreadGroupGui" testclass="kg.apc.jmeter.threads.UltimateThreadGroup" testname="Ultimate Thread Group - Collab &amp; Download">
         <collectionProp name="ultimatethreadgroupdata">
           <collectionProp name="-1472385228">
             <stringProp name="50">2</stringProp>
@@ -480,7 +480,15 @@ vars.put(&quot;password&quot;, vars.get(&quot;collab_password&quot;));</stringPr
             <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
             <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
             <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-              <collectionProp name="Arguments.arguments"/>
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="itemType" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">1</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                  <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                  <stringProp name="Argument.name">itemType</stringProp>
+                </elementProp>
+              </collectionProp>
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree>
@@ -502,7 +510,7 @@ vars.put(&quot;password&quot;, vars.get(&quot;collab_password&quot;));</stringPr
             <hashTree/>
           </hashTree>
         </hashTree>
-        <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="Collaboration_Flow">
+        <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="Collaboration_Flow" enabled="true">
           <boolProp name="TransactionController.includeTimers">false</boolProp>
         </TransactionController>
         <hashTree>
@@ -577,11 +585,12 @@ vars.put(&quot;password&quot;, vars.get(&quot;collab_password&quot;));</stringPr
             <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion" enabled="true">
               <collectionProp name="Asserion.test_strings">
                 <stringProp name="49590">204</stringProp>
+                <stringProp name="51512">404</stringProp>
               </collectionProp>
               <stringProp name="Assertion.custom_message"></stringProp>
               <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
-              <boolProp name="Assertion.assume_success">false</boolProp>
-              <intProp name="Assertion.test_type">8</intProp>
+              <boolProp name="Assertion.assume_success">true</boolProp>
+              <intProp name="Assertion.test_type">40</intProp>
             </ResponseAssertion>
             <hashTree/>
           </hashTree>
@@ -598,6 +607,16 @@ vars.put(&quot;password&quot;, vars.get(&quot;collab_password&quot;));</stringPr
         </elementProp>
       </PostThreadGroup>
       <hashTree>
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults" enabled="true">
+          <stringProp name="HTTPSampler.domain">${__P(BASE_URL, localhost)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(PORT, 7157)}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${__P(PROTOCOL, https)}</stringProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+        </ConfigTestElement>
+        <hashTree/>
         <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <stringProp name="LoopController.loops">20</stringProp>
         </LoopController>

@@ -26,7 +26,7 @@
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
         <stringProp name="ThreadGroup.num_threads">${__P(UPLOAD_USER, 20)}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">${__P(UPLOAD_RAMP_UP, 20)}</stringProp>
-        <stringProp name="ThreadGroup.duration">${__P(UPLOAD_DURATION, 180)}</stringProp>
+        <stringProp name="ThreadGroup.duration">${__P(UPLOAD_DURATION, 300)}</stringProp>
         <longProp name="ThreadGroup.delay">0</longProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
